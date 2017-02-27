@@ -244,6 +244,17 @@ VOID Fini(INT32 code, VOID *v)
  * @param[in]   argv            array of command line arguments, 
  *                              including pin -t <toolname> -- ...
  */
+
+BOOL Intercept(THREADID, INT32 sig, CONTEXT *, BOOL, const EXCEPTION_INFO *, VOID *){
+    std::cerr << "Intercepted signal " << sig << std::endl;
+
+//detach. so that segmentation fault will generate a core dump.	
+    PIN_Detach();
+//do not let the application unblock the signal	
+    return FALSE;
+}
+
+
 int main(int argc, char *argv[])
 {
     // Initialize PIN library. Print help message if -h(elp) is specified
@@ -259,6 +270,10 @@ int main(int argc, char *argv[])
 
     if (KnobCount)
     {
+
+//	PIN_UnblockSignal(11, TRUE);
+	PIN_InterceptSignal(11, Intercept, 0);
+
         // Register function to be called to instrument traces
         INS_AddInstrumentFunction(Trace, 0);
 
