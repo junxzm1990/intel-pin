@@ -1,4 +1,3 @@
-
 /*! @file
  *  This is an example of the PIN tool that demonstrates some basic PIN APIs 
  *  and could serve as the starting point for developing your first PIN tool
@@ -10,6 +9,8 @@
 #include <list>
 #include <sstream>
 #include <assert.h>
+#include <stdio.h>
+#include <iomanip>
 
 /* ================================================================== */
 // Global variables 
@@ -74,11 +75,13 @@ string Val2Str(const void* value, unsigned int size)
     sstr << hex;
     const unsigned char* cval = (const unsigned char*)value;
     // Traverse cval from end to beginning since the MSB is in the last block of cval.
+
     while (size)
     {
         --size;
-        sstr << (unsigned int)cval[size];
+        sstr << setfill('0') <<setw(2) << (unsigned int)cval[size];
     }
+
     return string("0x")+sstr.str();
 }
 
