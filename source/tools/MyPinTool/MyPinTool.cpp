@@ -31,6 +31,8 @@ KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE,  "pintool",
 KNOB<BOOL>   KnobCount(KNOB_MODE_WRITEONCE,  "pintool",
     "count", "1", "count instructions, basic blocks and threads in the application");
 
+KNOB<string> KnobXmmFile(KNOB_MODE_WRITEONCE,  "pintool",
+    "xmm", "", "specify file name for logging xmm registers");
 
 /* ===================================================================== */
 // Utilities
@@ -248,8 +250,49 @@ VOID Fini(INT32 code, VOID *v)
  *                              including pin -t <toolname> -- ...
  */
 
-BOOL Intercept(THREADID, INT32 sig, CONTEXT *, BOOL, const EXCEPTION_INFO *, VOID *){
+
+BOOL Intercept(THREADID, INT32 sig, CONTEXT *ctx, BOOL, const EXCEPTION_INFO *, VOID *){
     std::cerr << "Intercepted signal " << sig << std::endl;
+
+
+    //std::ostream * xmmout = &cerr;
+
+
+    string fileName = KnobXmmFile.Value();
+
+
+    FILE * pFile;
+
+    pFile = fopen (fileName.c_str(), "wb");
+
+    PIN_REGISTER regval;
+
+
+    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_XMM0, reinterpret_cast<UINT8*>(&regval));
+   fwrite((char *)(&regval), sizeof(char), regWidth2Size(LEVEL_BASE::REG_XMM0), pFile);
+
+    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_XMM1, reinterpret_cast<UINT8*>(&regval));
+   fwrite((char *)(&regval), sizeof(char), regWidth2Size(LEVEL_BASE::REG_XMM1), pFile);
+
+    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_XMM2, reinterpret_cast<UINT8*>(&regval));
+   fwrite((char *)(&regval), sizeof(char), regWidth2Size(LEVEL_BASE::REG_XMM2), pFile);
+
+    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_XMM3, reinterpret_cast<UINT8*>(&regval));
+   fwrite((char *)(&regval), sizeof(char), regWidth2Size(LEVEL_BASE::REG_XMM3), pFile);
+
+    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_XMM4, reinterpret_cast<UINT8*>(&regval));
+   fwrite((char *)(&regval), sizeof(char), regWidth2Size(LEVEL_BASE::REG_XMM4), pFile);
+
+    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_XMM5, reinterpret_cast<UINT8*>(&regval));
+   fwrite((char *)(&regval), sizeof(char), regWidth2Size(LEVEL_BASE::REG_XMM5), pFile);
+
+    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_XMM6, reinterpret_cast<UINT8*>(&regval));
+   fwrite((char *)(&regval), sizeof(char), regWidth2Size(LEVEL_BASE::REG_XMM6), pFile);
+
+    PIN_GetContextRegval(ctx, LEVEL_BASE::REG_XMM7, reinterpret_cast<UINT8*>(&regval));
+   fwrite((char *)(&regval), sizeof(char), regWidth2Size(LEVEL_BASE::REG_XMM7), pFile);
+
+   fclose(pFile);	
 
 //detach. so that segmentation fault will generate a core dump.	
     PIN_Detach();

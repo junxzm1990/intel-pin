@@ -26,5 +26,6 @@ make all TARGET=intel64
 # Run
 
 ```
-../../../pin -t obj-ia32/MyPinTool.so -o test.log -- /bin/ls
+../../../pin -t obj-ia32/MyPinTool.so -o test.log -xmm xmm.log -- /bin/ls
+(test.log records the execution traces; xmm.log records the values of xmm registers on crash of the program)
 ```
