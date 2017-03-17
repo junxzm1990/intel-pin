@@ -15,19 +15,17 @@ const char *GetSysName(ADDRINT sys_id) {
 }
 
 VOID SyscallEntry(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, VOID *v) {
-        out << "[entry] ";
         ADDRINT num  = PIN_GetSyscallNumber(ctx, std);
-    	out << num << "-";
 	UINT32 argnum = GetSysArgNum(num);
-	out << argnum << "-";
+    	out << num << "-" << argnum;
 	for (UINT32 id=0; id<argnum; id++) {
-		out << PIN_GetSyscallArgument(ctx, std, id) << "-";
+		out << "-" << PIN_GetSyscallArgument(ctx, std, id);
 	}
-	out << GetSysName(num) << endl;
+	out << "-" << GetSysName(num);
 }
  
 VOID SyscallExit(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, VOID *v) {
-        out << "[exit] " << PIN_GetSyscallReturn(ctx, std) << endl;
+        out << "-" << PIN_GetSyscallReturn(ctx, std) << endl;
 }
  
 KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool", "o", "testsys.out", "specify output file name");
@@ -47,6 +45,9 @@ int main(int argc, char * argv[]) {
         if (PIN_Init(argc, argv)) return Usage();
         out.open(KnobOutputFile.Value().c_str(), ios::out | ios::app);
  
+	/* format of sys.log file
+	 * syscall num - argnum - args ... - syscall name - return value
+	 */
         /* functions to get called on system calls */
         PIN_AddSyscallEntryFunction(SyscallEntry, 0);
         PIN_AddSyscallExitFunction(SyscallExit, 0);
