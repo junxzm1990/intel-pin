@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <iomanip>
+#include "syscallent.h"
 
 /* ================================================================== */
 // Global variables 
@@ -21,6 +22,7 @@ UINT64 bblCount = 0;        //number of dynamically executed basic blocks
 UINT64 threadCount = 0;     //total number of threads, including main thread
 
 std::ostream * out = &cerr;
+std::ostream * sysout = &cerr;
 
 /* ===================================================================== */
 // Command line switches
@@ -33,6 +35,9 @@ KNOB<BOOL>   KnobCount(KNOB_MODE_WRITEONCE,  "pintool",
 
 KNOB<string> KnobXmmFile(KNOB_MODE_WRITEONCE,  "pintool",
     "xmm", "", "specify file name for logging xmm registers");
+
+KNOB<string> KnobSysFile(KNOB_MODE_WRITEONCE,  "pintool",
+    "sys", "", "specify file name for logging arguments for system call");
 
 /* ===================================================================== */
 // Utilities
@@ -300,6 +305,28 @@ BOOL Intercept(THREADID, INT32 sig, CONTEXT *ctx, BOOL, const EXCEPTION_INFO *, 
     return FALSE;
 }
 
+INT32 GetSysArgNum(ADDRINT sys_id) {
+    return sys_map[sys_id].argnum;
+}
+
+const char *GetSysName(ADDRINT sys_id) {
+    return sys_map[sys_id].sysname;
+}
+
+VOID SyscallEntry(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, VOID *v) {
+    ADDRINT num  = PIN_GetSyscallNumber(ctx, std);
+    UINT32 argnum = GetSysArgNum(num);
+
+    *sysout << num << "-" << argnum;
+    for (UINT32 id=0; id<argnum; id++) {
+        *sysout << "-" << PIN_GetSyscallArgument(ctx, std, id);
+    }
+    *sysout << "-" << GetSysName(num);
+}
+
+VOID SyscallExit(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, VOID *v) {
+    *sysout << "-" << PIN_GetSyscallReturn(ctx, std) << endl;
+}
 
 int main(int argc, char *argv[])
 {
@@ -312,7 +339,15 @@ int main(int argc, char *argv[])
     
     string fileName = KnobOutputFile.Value();
 
-    if (!fileName.empty()) { out = new std::ofstream(fileName.c_str());}
+    if (!fileName.empty()) {
+	out = new std::ofstream(fileName.c_str());
+    }
+
+    string sysFile = KnobSysFile.Value();
+
+    if (!sysFile.empty()) {
+	sysout = new std::ofstream(sysFile.c_str());
+    }
 
     if (KnobCount)
     {
@@ -329,6 +364,10 @@ int main(int argc, char *argv[])
         // Register function to be called when the application exits
 //        PIN_AddFiniFunction(Fini, 0);
     }
+
+    /* functions to get called on system calls */
+    PIN_AddSyscallEntryFunction(SyscallEntry, 0);
+    PIN_AddSyscallExitFunction(SyscallExit, 0);
     
     cerr <<  "===============================================" << endl;
     cerr <<  "This application is instrumented by MyPinTool" << endl;
