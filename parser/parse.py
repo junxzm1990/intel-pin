@@ -1,11 +1,15 @@
+#!/usr/bin/python
+
 import os
 import sys
 
 RegIdDict = {"eax" : 1, "ecx": 2, "edx": 3, "ebx": 4, "esp":5, "ebp":6, "esi":7, "edi":8, "ax":9, "cx":10, "dx":11, "bx":12, "sp":13, "bp":14, "si":15, "di":16, "al":17, "cl":18, "dl":19, "bl":20, "ah":21, "ch":22, "dh":23, "bh":24, "mm0":25, "mm1": 26, "mm2": 27, "mm3":28, "mm4":29, "mm5":30, "mm6":31, "mm7":32, "xmm0":33, "xmm1":34, "xmm2":35, "xmm3":36, "xmm4":37, "xmm5":38, "xmm6":39, "xmm7":40, "eflags":81, "eip":85, "es":65, "cs":66, "ss":67, "ds":68, "fs":69, "gs":70}
 
+SysCallRegs = [1, 4, 2, 3, 7, 8, 6]
+
 def parse_regs(reginfo):
 
-	print reginfo
+	#print reginfo
 
 	regs = {}
 	for item in reginfo:
@@ -27,17 +31,42 @@ def parse_regs(reginfo):
 			regs[RegIdDict[regval[0][2:]]] = val
 	return regs
 
-def parse_file(logpath, instpath, regpath):
+# format of sysinfo
+# syscall num - arguments num - arguments... - syscallname -return value
+def parse_sysargs(sysinfo):
+
+	regs = {}
+
+	syslogs = sysinfo.split("-")
+
+	regs[SysCallRegs[0]] = syslogs[0]
+	
+	argnum = int(syslogs[1])
+	
+	for index, args in enumerate(syslogs[2:]) :
+		if index < argnum :
+			regs[SysCallRegs[1+index]] =  "0x%x" % int(args)
+	
+	return regs, syslogs[argnum+3]
+
+def is_syscall(inst) :
+	return inst.startswith('sysenter') or inst.startswith('int')
+
+def parse_file(logpath, instpath, regpath, syslogpath):
 	
 	inst = []
 	regs = []
 	logs = []
+	syslog = []
+	syscount = 0
 
 	with open(logpath, "r") as fr:
-		log = fr.read().split("\n")
+		logs = fr.read().split("\n")
 
+	with open(syslogpath, "r") as fd:
+		syslog = fd.read().split("\n")
 
-	for line in log:
+	for line in logs:
 		if not len(line):
 			break;
 
@@ -45,25 +74,34 @@ def parse_file(logpath, instpath, regpath):
 		inst.append(items[1])
 		
 		if len(items) >= 4:
-			regdict = parse_regs(items[3:])
+
+			if is_syscall(items[2]) :
+				regdict, retval = parse_sysargs(syslog[syscount])
+				syscount += 1
+			else :
+				regdict = parse_regs(items[3:])
+
 			if len(regdict) == 0:
-				logs.append("noreg")
+				regval = "noreg"
 			else:
-				logs.append(";".join([str(reg)+":" + regdict[reg] for reg in regdict]))
+				regval = ";".join([str(reg)+":" + regdict[reg] for reg in regdict])
 			
-			
+			if is_syscall(items[2]) :
+				regval += ";1:" + "0x%x" % int(retval)
 		else:
-			logs.append("noreg")
+			regval = "noreg"
+
+		regs.append(regval)
 
 	with open(instpath, "w") as fw:
 		fw.write("\n".join([x for x in inst]))
 
 	with open(regpath, "w") as fw:
-		fw.write("\n".join([x for x in logs]))
+		fw.write("\n".join([x for x in regs]))
 
-	print "\n".join([x for x in logs])
 #do the parse
 if __name__ == "__main__":
-	parse_file(sys.argv[1], sys.argv[2], sys.argv[3])
+	if len(sys.argv) != 5 :
+		print "Usage: provide four arguments, log by intel pin, inst, reg, syscall\n"
 
-
+	parse_file(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
