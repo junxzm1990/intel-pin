@@ -314,18 +314,28 @@ const char *GetSysName(ADDRINT sys_id) {
 }
 
 VOID SyscallEntry(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, VOID *v) {
+
+    ADDRINT argval;
+
     ADDRINT num  = PIN_GetSyscallNumber(ctx, std);
+
     UINT32 argnum = GetSysArgNum(num);
 
-    *sysout << num << "-" << argnum;
+    *sysout << std::hex << Val2Str(&num, 4);
+    *sysout << "-";
+    *sysout << std::hex << argnum;
+
     for (UINT32 id=0; id<argnum; id++) {
-        *sysout << "-" << PIN_GetSyscallArgument(ctx, std, id);
+	argval = PIN_GetSyscallArgument(ctx, std, id);
+        *sysout << "-" << std::hex << Val2Str(&argval, 4);
     }
-    *sysout << "-" << GetSysName(num);
+    //*sysout << "-" << GetSysName(num);
 }
 
 VOID SyscallExit(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, VOID *v) {
-    *sysout << "-" << PIN_GetSyscallReturn(ctx, std) << endl;
+
+    ADDRINT retval =  PIN_GetSyscallReturn(ctx, std);
+    *sysout << "-" << std::hex << Val2Str(&retval, 4) << endl;
 }
 
 int main(int argc, char *argv[])

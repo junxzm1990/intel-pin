@@ -45,9 +45,9 @@ def parse_sysargs(sysinfo):
 	
 	for index, args in enumerate(syslogs[2:]) :
 		if index < argnum :
-			regs[SysCallRegs[1+index]] =  "0x%x" % int(args)
+			regs[SysCallRegs[1+index]] =  args
 	
-	return regs, syslogs[argnum+3]
+	return regs, syslogs[argnum+2]
 
 def is_syscall(inst) :
 	return inst.startswith('sysenter') or inst.startswith('int')
@@ -87,7 +87,7 @@ def parse_file(logpath, instpath, regpath, syslogpath):
 				regval = ";".join([str(reg)+":" + regdict[reg] for reg in regdict])
 			
 			if is_syscall(items[2]) :
-				regval += ";1:" + "0x%x" % int(retval)
+				regval += ";1:" + retval
 		else:
 			regval = "noreg"
 

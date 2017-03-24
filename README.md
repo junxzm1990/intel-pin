@@ -4,8 +4,9 @@ Intel Pin application to trace executed instructions and the values of registers
 
 # Prerequirement
 
-- Download source code of Intel PT
-- Replace source/tools/MyPinTool/MyPinTool.cpp of the native Pin with the one in this repo. 
+- Download source code of Intel PT;
+- Replace source/tools/MyPinTool/MyPinTool.cpp of the native Pin with the one in this repo;
+- Copy source/tools/MyPinTool/syscallent.h to directory of native Pin;
 
 # Build
 
@@ -26,6 +27,18 @@ make all TARGET=intel64
 # Run
 
 ```
-../../../pin -t obj-ia32/MyPinTool.so -o test.log -xmm xmm.log -- /bin/ls
-(test.log records the execution traces; xmm.log records the values of xmm registers on crash of the program)
+~/pin-3.2-81205-gcc-linux/pin -t obj-ia32/MyPinTool.so -o latex2rtf.log -sys sys.log -- ~/testcases/latex2rtf-1.9.15/latex2rtf ~/testcases/latex2rtf-1.9.15/poc.tex
+
+ - ~/pin-3.2-81205-gcc-linux/ - path of pin executable;
+ - test.log - records the execution traces and value of registers;
+ - sys.log  - records syscall num and arguments of the program;
+```
+
+```
+./parse.py latex2rtf/latex2rtf.log latex2rtf/instructions latex2rtf/reginfo latex2rtf/sys.log
+
+ - latex2rtf/latex2rtf.log : Read, copied by test.log
+ - latex2rtf/instructions  : Write
+ - latex2rtf/reginfo       : Write
+ - latex2rtf/sys.log       : Read, copied by sys.log
 ```
