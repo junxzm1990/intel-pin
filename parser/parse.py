@@ -78,16 +78,16 @@ def parse_file(logpath, instpath, regpath, syslogpath):
 			if is_syscall(items[2]) :
 				regdict, retval = parse_sysargs(syslog[syscount])
 				syscount += 1
+				regval = "1:" + retval + ";"
 			else :
 				regdict = parse_regs(items[3:])
+				regval = ""
 
 			if len(regdict) == 0:
 				regval = "noreg"
 			else:
-				regval = ";".join([str(reg)+":" + regdict[reg] for reg in regdict])
+				regval += ";".join([str(reg)+":" + regdict[reg] for reg in regdict])
 			
-			if is_syscall(items[2]) :
-				regval += ";1:" + retval
 		else:
 			regval = "noreg"
 
