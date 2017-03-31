@@ -12,15 +12,17 @@
 #include <stdio.h>
 #include <iomanip>
 
+#define THRESHOLD 1000
+
 /* ================================================================== */
 // Global variables 
 /* ================================================================== */
 
 UINT64 insCount = 0;        //number of dynamically executed instructions
-UINT64 bblCount = 0;        //number of dynamically executed basic blocks
 UINT64 threadCount = 0;     //total number of threads, including main thread
 
 std::ostream * out = &cerr;
+std::stringstream ss;
 
 /* ===================================================================== */
 // Command line switches
@@ -51,21 +53,6 @@ INT32 Usage()
     return -1;
 }
 
-/* ===================================================================== */
-// Analysis routines
-/* ===================================================================== */
-
-/*!
- * Increase counter of the executed basic blocks and instructions.
- * This function is called for every basic block when it is about to be executed.
- * @param[in]   numInstInBbl    number of instructions in the basic block
- * @note use atomic operations for multi-threaded applications
- */
-VOID CountBbl(UINT32 numInstInBbl)
-{
-    bblCount++;
-    insCount += numInstInBbl;
-}
 
 /* ===================================================================== */
 // Instrumentation callbacks
@@ -95,6 +82,7 @@ const char * dumpInstructions(INS ins){
 	return strdup(ss.str().c_str());
 
 }
+
 
 std::list<REG> * listRegisters(INS ins){
 
@@ -166,42 +154,55 @@ UINT regWidth2Size(REG reg){
 
 VOID LogInstDetail(THREADID threadID, ADDRINT address, const CONTEXT *ctx, const char* disasm, void * regdata, void *memdata){
 	
+	// count inst number
+	insCount++;	
+
 	std::list<REG> * registers = (std::list<REG> *)regdata;
 		
 	std::list<REG> * memreg = (std::list<REG> *)memdata;
 
-	*out << threadID << "-" << std::hex << address << "-" << disasm;
+	REG reg;
+	int count = 0;
+	std::string name;
+	PIN_REGISTER regval; 
+		
+
+	ss << threadID << "-" << std::hex << address << "-" << disasm;
 
 	for(std::list<REG>::iterator it = registers ->begin(); it != registers->end(); it++){
-		*out << "-OR";
 
-		REG reg = (*it);
-		std::string name = REG_StringShort(reg);
-		*out<< name.c_str() << ":";
+		ss << "-OR";
 
-		PIN_REGISTER regval; 
-		
+		reg = (*it);
+		name = REG_StringShort(reg);
+
+		ss<< name.c_str() << ":";
+
 		PIN_GetContextRegval(ctx, reg, reinterpret_cast<UINT8*>(&regval));
 		
-		*out << std::hex << Val2Str(&regval, regWidth2Size(reg));
+		ss << std::hex << Val2Str(&regval, regWidth2Size(reg));
 	}
 
 
-	for(std::list<REG>::iterator it = memreg ->begin(); it != memreg->end(); it++){
-		*out << "-OM";
+	for(std::list<REG>::iterator it = memreg ->begin(); it != memreg->end(); it++, count++){
+		ss << "-OM";
 
-		REG reg = (*it);
-		std::string name = REG_StringShort(reg);
-		*out<< name.c_str() << ":";
+		reg = (*it);
+		name = REG_StringShort(reg);
 
-		PIN_REGISTER regval; 
-		
+		ss << name.c_str() << ":";
+
 		PIN_GetContextRegval(ctx, reg, reinterpret_cast<UINT8*>(&regval));
 		
-		*out << std::hex << Val2Str(&regval, regWidth2Size(reg));
+		ss << std::hex << Val2Str(&regval, regWidth2Size(reg));
 	}
 
-	*out << endl;
+	ss << endl;
+
+	if (insCount % THRESHOLD == 0) {
+		*out << ss.rdbuf();
+		ss.str("");
+	}
 }
 
 
@@ -234,12 +235,7 @@ VOID ThreadStart(THREADID threadIndex, CONTEXT *ctxt, INT32 flags, VOID *v)
  */
 VOID Fini(INT32 code, VOID *v)
 {
-    *out <<  "===============================================" << endl;
-    *out <<  "MyPinTool analysis results: " << endl;
-    *out <<  "Number of instructions: " << insCount  << endl;
-    *out <<  "Number of basic blocks: " << bblCount  << endl;
-    *out <<  "Number of threads: " << threadCount  << endl;
-    *out <<  "===============================================" << endl;
+	cerr << "Never will be invoked with signal intercepted\n" << endl;
 }
 
 /*!
@@ -252,14 +248,13 @@ VOID Fini(INT32 code, VOID *v)
 
 
 BOOL Intercept(THREADID, INT32 sig, CONTEXT *ctx, BOOL, const EXCEPTION_INFO *, VOID *){
+
     std::cerr << "Intercepted signal " << sig << std::endl;
 
-
-    //std::ostream * xmmout = &cerr;
-
+    //*out << ss.rdbuf();
+    //ss.str("");
 
     string fileName = KnobXmmFile.Value();
-
 
     FILE * pFile;
 
@@ -314,6 +309,8 @@ int main(int argc, char *argv[])
 
     if (!fileName.empty()) { out = new std::ofstream(fileName.c_str());}
 
+    ss.str("");
+
     if (KnobCount)
     {
 
@@ -327,15 +324,17 @@ int main(int argc, char *argv[])
 //        PIN_AddThreadStartFunction(ThreadStart, 0);
 
         // Register function to be called when the application exits
-//        PIN_AddFiniFunction(Fini, 0);
+        PIN_AddFiniFunction(Fini, 0);
     }
     
     cerr <<  "===============================================" << endl;
     cerr <<  "This application is instrumented by MyPinTool" << endl;
+
     if (!KnobOutputFile.Value().empty()) 
     {
         cerr << "See file " << KnobOutputFile.Value() << " for analysis results" << endl;
     }
+
     cerr <<  "===============================================" << endl;
 
     // Start the program, never returns
