@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <iomanip>
 
-#define THRESHOLD 1000
+#define THRESHOLD 100000
 
 /* ================================================================== */
 // Global variables 
@@ -77,9 +77,9 @@ string Val2Str(const void* value, unsigned int size)
 
 const char * dumpInstructions(INS ins){
 
-	std::stringstream ss; 
-	ss << INS_Disassemble(ins);
-	return strdup(ss.str().c_str());
+	std::stringstream ssl; 
+	ssl << INS_Disassemble(ins);
+	return strdup(ssl.str().c_str());
 
 }
 
@@ -200,7 +200,7 @@ VOID LogInstDetail(THREADID threadID, ADDRINT address, const CONTEXT *ctx, const
 	ss << endl;
 
 	if (insCount % THRESHOLD == 0) {
-		*out << ss.rdbuf();
+		*out << ss.rdbuf() << std::flush;
 		ss.str("");
 	}
 }
@@ -236,6 +236,9 @@ VOID ThreadStart(THREADID threadIndex, CONTEXT *ctxt, INT32 flags, VOID *v)
 VOID Fini(INT32 code, VOID *v)
 {
 	cerr << "Never will be invoked with signal intercepted\n" << endl;
+	*out << ss.rdbuf() << std::flush;
+	ss.str("");
+
 }
 
 /*!
@@ -252,7 +255,7 @@ BOOL Intercept(THREADID, INT32 sig, CONTEXT *ctx, BOOL, const EXCEPTION_INFO *, 
     std::cerr << "Instruction Count: " << insCount << std::endl;
     std::cerr << "Intercepted signal " << sig << std::endl;
 
-    *out << ss.rdbuf();
+    *out << ss.rdbuf() << std::flush;
     ss.str("");
 
     string fileName = KnobXmmFile.Value();
