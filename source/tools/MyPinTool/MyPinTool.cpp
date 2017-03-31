@@ -249,10 +249,11 @@ VOID Fini(INT32 code, VOID *v)
 
 BOOL Intercept(THREADID, INT32 sig, CONTEXT *ctx, BOOL, const EXCEPTION_INFO *, VOID *){
 
+    std::cerr << "Instruction Count: " << insCount << std::endl;
     std::cerr << "Intercepted signal " << sig << std::endl;
 
-    //*out << ss.rdbuf();
-    //ss.str("");
+    *out << ss.rdbuf();
+    ss.str("");
 
     string fileName = KnobXmmFile.Value();
 
