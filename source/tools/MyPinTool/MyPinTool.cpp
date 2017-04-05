@@ -19,7 +19,6 @@
 /* ================================================================== */
 
 UINT64 insCount = 0;        //number of dynamically executed instructions
-UINT64 threadCount = 0;     //total number of threads, including main thread
 
 std::ostream * out = &cerr;
 std::stringstream ss;
@@ -165,9 +164,10 @@ VOID LogInstDetail(THREADID threadID, ADDRINT address, const CONTEXT *ctx, const
 	int count = 0;
 	std::string name;
 	PIN_REGISTER regval; 
-		
 
-	ss << threadID << "-" << std::hex << address << "-" << disasm;
+	INT pid = PIN_GetPid();
+	
+	ss << pid << "-" << threadID << "-" << std::hex << address << "-" << disasm;
 
 	for(std::list<REG>::iterator it = registers ->begin(); it != registers->end(); it++){
 
@@ -209,21 +209,6 @@ VOID LogInstDetail(THREADID threadID, ADDRINT address, const CONTEXT *ctx, const
 VOID Trace(INS ins,  VOID *v){
 
 	INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)LogInstDetail, IARG_THREAD_ID, IARG_INST_PTR, IARG_CONTEXT, IARG_PTR, dumpInstructions(ins), IARG_PTR, (void*)listRegisters(ins), IARG_PTR, (void*)listMemRegisters(ins), IARG_END);
-}
-
-/*!
- * Increase counter of threads in the application.
- * This function is called for every thread created by the application when it is
- * about to start running (including the root thread).
- * @param[in]   threadIndex     ID assigned by PIN to the new thread
- * @param[in]   ctxt            initial register state for the new thread
- * @param[in]   flags           thread creation flags (OS specific)
- * @param[in]   v               value specified by the tool in the 
- *                              PIN_AddThreadStartFunction function call
- */
-VOID ThreadStart(THREADID threadIndex, CONTEXT *ctxt, INT32 flags, VOID *v)
-{
-    threadCount++;
 }
 
 /*!
@@ -331,6 +316,8 @@ int main(int argc, char *argv[])
         PIN_AddFiniFunction(Fini, 0);
     }
     
+    cerr << "Pid " << PIN_GetPid() << endl;
+
     cerr <<  "===============================================" << endl;
     cerr <<  "This application is instrumented by MyPinTool" << endl;
 
