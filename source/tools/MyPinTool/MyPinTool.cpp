@@ -24,6 +24,7 @@ UINT64 threadCount = 0;     //total number of threads, including main thread
 
 std::ostream * out = &cerr;
 std::ostream * sysout = &cerr;
+std::ostream * mapout = &cerr;
 
 std::stringstream ss;
 
@@ -33,11 +34,11 @@ std::stringstream ss;
 KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE,  "pintool",
 		"o", "", "specify file name for MyPinTool output");
 
-KNOB<BOOL>   KnobCount(KNOB_MODE_WRITEONCE,  "pintool",
-		"count", "1", "count instructions, basic blocks and threads in the application");
-
 KNOB<string> KnobSysFile(KNOB_MODE_WRITEONCE,  "pintool",
 		"sys", "", "specify file name for logging arguments for system call");
+
+KNOB<string> KnobMapFile(KNOB_MODE_WRITEONCE,  "pintool",
+		"map", "", "specify file name for logging maps of address space");
 
 /* ===================================================================== */
 // Utilities
@@ -229,7 +230,7 @@ VOID Trace(INS ins,  VOID *v)
  */
 VOID Fini(INT32 code, VOID *v)
 {
-	cerr << "Never will be invoked with signal intercepted\n" << endl;
+	cerr << "Only be invoked with signal unlocked\n" << endl;
 	*out << ss.rdbuf() << std::flush;
 	ss.str("");
 }
@@ -287,12 +288,38 @@ VOID SyscallEntry(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, VOID *v)
 	//*sysout << "-" << GetSysName(num);
 }
 
+
 VOID SyscallExit(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, VOID *v)
 {
 
 	ADDRINT retval =  PIN_GetSyscallReturn(ctx, std);
 	*sysout << "-" << std::hex << Val2Str(&retval, 4) << endl;
 }
+
+
+void library_unloaded_function(IMG image, void* arg)
+{
+        //*mapout << "Unloading " << IMG_Name(image) << endl;
+}
+
+
+void library_loaded_function(IMG image, void* arg)
+{
+        *mapout << IMG_Name(image) << "|";
+        *mapout << hex << IMG_LowAddress(image) << "|";
+        *mapout << IMG_HighAddress(image) << endl;
+/*
+        UINT32 num_of_region = IMG_NumRegions(image);
+
+        for (UINT32 i = 0; i < num_of_region; i++) {
+                *mapout << "Region " << i << endl;
+                *mapout << "Low:" << IMG_RegionLowAddress(image, i) << "|";
+                *mapout << "High:" << IMG_RegionHighAddress(image, i) << endl;
+        }
+*/
+}
+
+
 
 int main(int argc, char *argv[])
 {
@@ -314,23 +341,30 @@ int main(int argc, char *argv[])
 		sysout = new std::ofstream(sysFile.c_str());
 	}
 
+	string mapFile = KnobMapFile.Value();
+
+	if (!mapFile.empty()) {
+		mapout = new std::ofstream(mapFile.c_str());
+	}
+
 	ss.str("");
 
-	if (KnobCount) {
+	//	PIN_UnblockSignal(11, TRUE);
+	PIN_InterceptSignal(11, Intercept, 0);
 
-		//	PIN_UnblockSignal(11, TRUE);
-		PIN_InterceptSignal(11, Intercept, 0);
-
-		// Register function to be called to instrument traces
-		INS_AddInstrumentFunction(Trace, 0);
-
-		// Register function to be called when the application exits
-		PIN_AddFiniFunction(Fini, 0);
-	}
+	// Register function to be called to instrument traces
+	INS_AddInstrumentFunction(Trace, 0);
 
 	/* functions to get called on system calls */
 	PIN_AddSyscallEntryFunction(SyscallEntry, 0);
 	PIN_AddSyscallExitFunction(SyscallExit, 0);
+
+	/* functions to get called on library loading */
+        IMG_AddInstrumentFunction(library_loaded_function, 0);
+        IMG_AddUnloadFunction(library_unloaded_function, 0);
+
+	// Register function to be called when the application exits
+	PIN_AddFiniFunction(Fini, 0);
 
 	cerr << "Pid " << std::hex << PIN_GetPid() << endl;
 

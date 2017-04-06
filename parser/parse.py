@@ -71,16 +71,16 @@ def parse_file(logpath, instpath, regpath, syslogpath):
 			break;
 
 		items = line.split("-")	
-		inst.append(items[1])
+		inst.append(items[2])
 		
-		if len(items) >= 4:
+		if len(items) >= 5:
 
-			if is_syscall(items[2]) :
+			if is_syscall(items[3]) :
 				regdict, retval = parse_sysargs(syslog[syscount])
 				syscount += 1
 				regval = "1:" + retval + ";"
 			else :
-				regdict = parse_regs(items[3:])
+				regdict = parse_regs(items[4:])
 				regval = ""
 
 			if len(regdict) == 0:

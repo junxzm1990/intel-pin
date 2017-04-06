@@ -27,18 +27,21 @@ make all TARGET=intel64
 # Run
 
 ```
-~/pin-3.2-81205-gcc-linux/pin -t obj-ia32/MyPinTool.so -o latex2rtf.log -sys sys.log -- ~/testcases/latex2rtf-1.9.15/latex2rtf ~/testcases/latex2rtf-1.9.15/poc.tex
+cd  ~/pin-3.2-81205-gcc-linux/source/tools/MyPinTool
+
+../../../pin -t obj-ia32/MyPinTool.so -o latex2rtf.log -sys sys.log -map maps -- ~/testcases/latex2rtf-1.9.15/latex2rtf ~/testcases/latex2rtf-1.9.15/poc.tex
 
  - ~/pin-3.2-81205-gcc-linux/ - path of pin executable;
  - test.log - records the execution traces and value of registers;
  - sys.log  - records syscall num and arguments of the program;
+ - maps     - records memory layout of the program;
 ```
 
 ```
 ./parse.py latex2rtf/latex2rtf.log latex2rtf/instructions latex2rtf/reginfo latex2rtf/sys.log
 
- - latex2rtf/latex2rtf.log : Read, copied by test.log
+ - latex2rtf/latex2rtf.log : Read
  - latex2rtf/instructions  : Write
  - latex2rtf/reginfo       : Write
- - latex2rtf/sys.log       : Read, copied by sys.log
+ - latex2rtf/sys.log       : Read
 ```
