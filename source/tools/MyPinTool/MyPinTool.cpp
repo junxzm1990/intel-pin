@@ -167,7 +167,7 @@ VOID LogInstDetail(THREADID threadID, ADDRINT address, const CONTEXT *ctx, const
 
 	INT pid = PIN_GetPid();
 	
-	ss << pid << "-" << threadID << "-" << std::hex << address << "-" << disasm;
+	ss << std::hex << pid << "-" << threadID << "-" << address << "-" << disasm;
 
 	for(std::list<REG>::iterator it = registers ->begin(); it != registers->end(); it++){
 
@@ -316,7 +316,7 @@ int main(int argc, char *argv[])
         PIN_AddFiniFunction(Fini, 0);
     }
     
-    cerr << "Pid " << PIN_GetPid() << endl;
+    cerr << "Pid " << std::hex << PIN_GetPid() << endl;
 
     cerr <<  "===============================================" << endl;
     cerr <<  "This application is instrumented by MyPinTool" << endl;
