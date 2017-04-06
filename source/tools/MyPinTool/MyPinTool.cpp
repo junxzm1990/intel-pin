@@ -165,9 +165,10 @@ VOID LogInstDetail(THREADID threadID, ADDRINT address, const CONTEXT *ctx, const
 	std::string name;
 	PIN_REGISTER regval; 
 
-	INT pid = PIN_GetPid();
+	//INT pid = PIN_GetPid();
 	
-	ss << std::hex << pid << "-" << threadID << "-" << address << "-" << disasm;
+	//ss << std::hex << pid << "-" << threadID << "-" << address << "-" << disasm;
+	ss << std::hex << threadID << "-" << address << "-" << disasm;
 
 	for(std::list<REG>::iterator it = registers ->begin(); it != registers->end(); it++){
 
