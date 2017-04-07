@@ -305,8 +305,8 @@ void library_unloaded_function(IMG image, void* arg)
 
 void library_loaded_function(IMG image, void* arg)
 {
-        *mapout << IMG_Name(image) << "|";
-        *mapout << hex << IMG_LowAddress(image) << "|";
+        *mapout << IMG_Name(image) << " ";
+        *mapout << hex << IMG_LowAddress(image) << " ";
         *mapout << IMG_HighAddress(image) << endl;
 /*
         UINT32 num_of_region = IMG_NumRegions(image);
