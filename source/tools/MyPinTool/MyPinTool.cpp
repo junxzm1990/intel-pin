@@ -112,14 +112,19 @@ std::list<REG> * listMemRegisters(INS ins)
 	for (UINT i = 0; i < INS_OperandCount(ins); i++){
 
 		if(INS_OperandIsMemory(ins, i)){
-			registers->push_back(INS_OperandMemoryBaseReg(ins, i));
-			registers->push_back(INS_OperandMemoryIndexReg(ins, i));
+
+			if (REG_valid(INS_OperandMemoryBaseReg(ins, i))) {
+				registers->push_back(INS_OperandMemoryBaseReg(ins, i));
+			}
+
+			if (REG_valid(INS_OperandMemoryIndexReg(ins, i))) {
+				registers->push_back(INS_OperandMemoryIndexReg(ins, i));
+			}
 
 			if (INS_OperandMemorySegmentReg (ins, i) == REG_SEG_GS) {
 				registers->push_back(REG_SEG_GS_BASE);
 			}
 		}
-
 	}
 
 	return registers;
@@ -163,7 +168,22 @@ UINT regWidth2Size(REG reg)
 }
 
 
-VOID LogInstDetail(THREADID threadID, ADDRINT address, const CONTEXT *ctx, const char* disasm, void * regdata, void *memdata)
+VOID LogInstDetail_Sim(THREADID threadID, ADDRINT address, const CONTEXT *ctx, const char *disasm) {
+	// count inst number
+	insCount++;
+
+	INT pid = PIN_GetPid();
+	
+	ss << std::hex << pid << "-" << threadID << "-" << address << "-" << disasm << endl;
+
+	if (insCount % THRESHOLD == 0) {
+		*out << ss.rdbuf() << std::flush;
+		ss.str("");
+	}
+}
+
+
+VOID LogInstDetail_Com(THREADID threadID, ADDRINT address, const CONTEXT *ctx, const char* disasm, void * regdata, void *memdata)
 {
 	REG reg;
 	std::string name;
@@ -180,6 +200,7 @@ VOID LogInstDetail(THREADID threadID, ADDRINT address, const CONTEXT *ctx, const
 	
 	ss << std::hex << pid << "-" << threadID << "-" << address << "-" << disasm;
 
+	// fixme later: optimization for merging two list into one 
 	for(std::list<REG>::iterator it = registers ->begin(); it != registers->end(); it++){
 		ss << "-OR";
 
@@ -214,10 +235,34 @@ VOID LogInstDetail(THREADID threadID, ADDRINT address, const CONTEXT *ctx, const
 }
 
 
+BOOL IsLogRegInfo(INS ins) {
+
+	if (INS_IsBranch(ins)) return false;
+
+	const char * mnemonic = INS_Mnemonic(ins).c_str();
+	if (strcmp("TEST", mnemonic) == 0) {
+		return false;
+	}
+
+	if (strcmp("CMP", mnemonic) == 0) {
+		return false;
+	}
+
+	if (strcmp("NOP", mnemonic) == 0) {
+		return false;
+	}
+
+	return true;
+}
+
 VOID Trace(INS ins,  VOID *v)
 {
 
-	INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)LogInstDetail, IARG_THREAD_ID, IARG_INST_PTR, IARG_CONTEXT, IARG_PTR, dumpInstructions(ins), IARG_PTR, (void*)listRegisters(ins), IARG_PTR, (void*)listMemRegisters(ins), IARG_END);
+	if (IsLogRegInfo(ins)) {
+		INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)LogInstDetail_Com, IARG_THREAD_ID, IARG_INST_PTR, IARG_CONTEXT, IARG_PTR, dumpInstructions(ins), IARG_PTR, (void*)listRegisters(ins), IARG_PTR, (void*)listMemRegisters(ins), IARG_END);
+	} else {
+		INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)LogInstDetail_Sim, IARG_THREAD_ID, IARG_INST_PTR, IARG_CONTEXT, IARG_PTR, dumpInstructions(ins), IARG_END);
+	}
 }
 
 
