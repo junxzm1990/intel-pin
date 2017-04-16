@@ -313,6 +313,10 @@ const char *GetSysName(ADDRINT sys_id)
 	return sys_map[sys_id].sysname;
 }
 
+BOOL DoesSysNeverReturn(ADDRINT sysid) {
+	return ((sysid == 0xad) || (sysid == 0xfc) || (sysid == 0x77));
+}
+
 VOID SyscallEntry(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, VOID *v)
 {
 /*
@@ -339,7 +343,7 @@ VOID SyscallEntry(THREADID tid, CONTEXT *ctx, SYSCALL_STANDARD std, VOID *v)
 	//*sysout << "-" << GetSysName(num);
 
 	// sigreturn/exit_group never returns
-	if ((num == 0xad) || (num == 0xfc)) {
+	if (DoesSysNeverReturn(num)) {
 		ADDRINT retval = 0;
 		*sysout << "-" << std::hex << Val2Str(&retval, 4) << endl;
 	}
