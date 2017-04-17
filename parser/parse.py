@@ -54,53 +54,44 @@ def is_syscall(inst) :
 
 def parse_file(logpath, instpath, regpath, syslogpath):
 	
-	inst = []
-	regs = []
-	logs = []
 	syslog = []
 	syscount = 0
 
-	with open(logpath, "r") as fr:
-		logs = fr.read().split("\n")
-
+	# small file, directly read the whole into memory
 	with open(syslogpath, "r") as fd:
 		syslog = fd.read().split("\n")
 
-	for line in logs:
-		if not len(line):
-			break;
+	with open(logpath, "r") as fl, open(instpath, "w") as fi, open(regpath, "w") as fr:
+		for line in fl:
+			if not len(line):
+				break;
 
-		items = line.split("-")	
-		inst.append(items[2])
-		
-		if len(items) >= 5:
+			items = line.rstrip().split("-")	
 
-			if is_syscall(items[3]) :
-				regdict, retval = parse_sysargs(syslog[syscount])
-				syscount += 1
-				regval = "1:" + retval + ";"
-			else :
-				regdict = parse_regs(items[4:])
-				regval = ""
+			fi.write(items[2]+"\n")
 
-			if len(regdict) == 0:
-				regval = "noreg"
+			if len(items) >= 5:
+
+				if is_syscall(items[3]) :
+					regdict, retval = parse_sysargs(syslog[syscount])
+					syscount += 1
+					regval = "1:" + retval + ";"
+				else :
+					regdict = parse_regs(items[4:])
+					regval = ""
+
+				if len(regdict) == 0:
+					regval = "noreg"
+				else:
+					regval += ";".join([str(reg)+":" + regdict[reg] for reg in regdict])
 			else:
-				regval += ";".join([str(reg)+":" + regdict[reg] for reg in regdict])
-			
-		else:
-			regval = "noreg"
+				regval = "noreg"
 
-		regs.append(regval)
-
-	with open(instpath, "w") as fw:
-		fw.write("\n".join([x for x in inst]))
-
-	with open(regpath, "w") as fw:
-		fw.write("\n".join([x for x in regs]))
+			fr.write(regval + "\n")
 
 #do the parse
 if __name__ == "__main__":
+
 	if len(sys.argv) != 5 :
 		print "Usage: provide four arguments, log by intel pin, inst, reg, syscall\n"
 
