@@ -105,8 +105,18 @@ std::list<REG> * listMemRegisters(INS ins){
         for (UINT i = 0; i < INS_OperandCount(ins); i++){
 
                 if(INS_OperandIsMemory(ins, i)){
-                        registers->push_back(INS_OperandMemoryBaseReg(ins, i));
-                        registers->push_back(INS_OperandMemoryIndexReg(ins, i));
+
+			if (REG_valid(INS_OperandMemoryBaseReg(ins, i))) {
+				registers->push_back(INS_OperandMemoryBaseReg(ins, i));
+			}
+
+			if (REG_valid(INS_OperandMemoryIndexReg(ins, i))) {
+				registers->push_back(INS_OperandMemoryIndexReg(ins, i));
+			}
+
+			if (INS_OperandMemorySegmentReg (ins, i) == REG_SEG_GS) {
+				registers->push_back(REG_SEG_GS_BASE);
+			}
                 }
         }
 
